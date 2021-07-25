@@ -5,9 +5,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, IntegerField
 from wtforms.validators import DataRequired
 import requests
-import secrets
-
-
+from my_secrets import MOVIE_API
+import json
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
@@ -21,16 +20,16 @@ db = SQLAlchemy(app)
 ## Create new DB.
 class Movie(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(80), unique=True, nullable=False)
-    year = db.Column(db.Integer, unique=True, nullable=False)
-    description = db.Column(db.String(200), unique=True, nullable=False)
-    rating = db.Column(db.Float, unique=True, nullable=False)
-    ranking = db.Column(db.Integer, unique=True, nullable=False)
-    review = db.Column(db.String(200), unique=True, nullable=False)
-    img_url = db.Column(db.String(200), unique=True, nullable=False)
+    title = db.Column(db.String(80))
+    year = db.Column(db.Integer)
+    description = db.Column(db.String(200))
+    rating = db.Column(db.Float)
+    ranking = db.Column(db.Integer)
+    review = db.Column(db.String(200))
+    img_url = db.Column(db.String(200))
 # db.create_all()
-
-## Add the first movie to the new db.
+#
+# ## Add the first movie to the new db.
 # new_movie = Movie(
 #     title="Phone Booth",
 #     year=2002,
@@ -40,7 +39,7 @@ class Movie(db.Model):
 #     review="My favourite character was the caller.",
 #     img_url="https://image.tmdb.org/t/p/w500/tjrX2oWRCM3Tvarz38zlZM7Uc10.jpg"
 # )
-#
+# #
 # db.session.add(new_movie)
 # db.session.commit()
 
@@ -58,7 +57,10 @@ class RateMovieForm(FlaskForm):
 
 @app.route("/")
 def home():
-    all_movies = db.session.query(Movie).all()
+    all_movies = db.session.query(Movie).order_by(Movie.rating)
+    for rank in range(Movie.query.count()):
+        all_movies[rank].ranking = (Movie.query.count()) - rank
+    db.session.commit()
     return render_template("index.html", movies=all_movies)
 
 @app.route("/delete/<int:num>", methods=['POST', 'GET'])
@@ -83,12 +85,32 @@ def edit(num):
 
 
 
-    return render_template("edit.html")
+@app.route("/add", methods=['POST', 'GET'])
+def add():
+    form = AddMovie()
+    if form.validate_on_submit():
+        request = requests.get(f'https://api.themoviedb.org/3/search/movie?api_key={MOVIE_API}&query={form.movie_title.data}').json()
+        results = request["results"]
+        return render_template("select.html", results=results)
+    return render_template("add.html", form=form)
+
+@app.route("/new/<int:movie_id>", methods=['POST', 'GET'])
+def new(movie_id):
+    movie = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={MOVIE_API}").json()
+    # full_date = movie["year"]
+    # year = full_date[0:4]
+    new_movie = Movie(
+        title=movie["title"],
+        year=movie["release_date"][0:4],
+        description=movie["overview"],
+        img_url=f"https://image.tmdb.org/t/p/w500/{movie['poster_path']}"
+    )
+    db.session.add(new_movie)
+    db.session.commit()
+    return redirect(url_for("home"))
 
 
-# @app.route("/add")
-# def add():
-#     return render_template("add.html")
+
 
 if __name__ == '__main__':
     app.run(debug=True)
