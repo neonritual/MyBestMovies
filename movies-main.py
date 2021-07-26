@@ -1,12 +1,11 @@
-from flask import Flask, render_template, redirect, url_for, request
+from flask import Flask, render_template, redirect, url_for
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, IntegerField
-from wtforms.validators import DataRequired
 import requests
 from my_secrets import MOVIE_API
-import json
+## This uses an API key from themoviedb.org.
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
@@ -29,6 +28,8 @@ class Movie(db.Model):
     img_url = db.Column(db.String(200))
 # db.create_all()
 #
+
+
 # ## Add the first movie to the new db.
 # new_movie = Movie(
 #     title="Phone Booth",
