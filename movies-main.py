@@ -30,7 +30,7 @@ class Movie(db.Model):
 #
 
 
-# ## Add the first movie to the new db.
+# ## Add the first movie to the new db. After creation, it can be deleted, but it is kept here for review purposes.
 # new_movie = Movie(
 #     title="Phone Booth",
 #     year=2002,
@@ -59,6 +59,7 @@ class RateMovieForm(FlaskForm):
 @app.route("/")
 def home():
     all_movies = db.session.query(Movie).order_by(Movie.rating)
+    ## List movies from top to bottom, with highest score as #1 at bottom.
     for rank in range(Movie.query.count()):
         all_movies[rank].ranking = (Movie.query.count()) - rank
     db.session.commit()
@@ -66,6 +67,7 @@ def home():
 
 @app.route("/delete/<int:num>", methods=['POST', 'GET'])
 def delete(num):
+    ## Delete function by click delete button under movie.
     film = Movie.query.filter_by(id=num).first()
     db.session.delete(film)
     db.session.commit()
@@ -74,6 +76,7 @@ def delete(num):
 
 @app.route("/edit/<int:num>", methods=['POST', 'GET'])
 def edit(num):
+    ## Edit movie rating and review by clicking button and filling out form.
     form = RateMovieForm()
     film = Movie.query.filter_by(id=num).first()
     movie_title = film.title
@@ -88,6 +91,8 @@ def edit(num):
 
 @app.route("/add", methods=['POST', 'GET'])
 def add():
+    ## Search for new movie to add using TMDB API.
+    ## The results are shown on the 'select' page to then be selected by the user.
     form = AddMovie()
     if form.validate_on_submit():
         request = requests.get(f'https://api.themoviedb.org/3/search/movie?api_key={MOVIE_API}&query={form.movie_title.data}').json()
@@ -97,9 +102,8 @@ def add():
 
 @app.route("/new/<int:movie_id>", methods=['POST', 'GET'])
 def new(movie_id):
+    ## Create a new movie entry in the database, when selected by user on the 'select' page.
     movie = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={MOVIE_API}").json()
-    # full_date = movie["year"]
-    # year = full_date[0:4]
     new_movie = Movie(
         title=movie["title"],
         year=movie["release_date"][0:4],
@@ -109,9 +113,6 @@ def new(movie_id):
     db.session.add(new_movie)
     db.session.commit()
     return redirect(url_for("home"))
-
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)
